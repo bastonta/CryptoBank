@@ -1,4 +1,4 @@
-﻿namespace CryptoBank.WebApi.Configurations;
+﻿namespace CryptoBank.WebApi.Features.News.Options;
 
 public class NewsOptions
 {

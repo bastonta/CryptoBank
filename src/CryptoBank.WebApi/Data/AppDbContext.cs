@@ -1,11 +1,11 @@
-﻿using CryptoBank.WebApi.Data.Entities;
+﻿using CryptoBank.WebApi.Features.News.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace CryptoBank.WebApi.Data;
 
 public sealed class AppDbContext : DbContext
 {
-    public DbSet<News> News { get; set; } = null!;
+    public DbSet<NewsModel> News { get; set; } = null!;
 
     public AppDbContext(DbContextOptions options) : base(options)
     {

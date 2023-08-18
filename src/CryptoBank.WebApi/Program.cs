@@ -1,73 +1,45 @@
-using CryptoBank.WebApi.Configurations;
 using CryptoBank.WebApi.Data;
-using CryptoBank.WebApi.Services;
-using CryptoBank.WebApi.Services.Implementations;
+using CryptoBank.WebApi.Features.News.Registration;
+using CryptoBank.WebApi.Pipeline;
+using CryptoBank.WebApi.Pipeline.Behaviors;
+using FastEndpoints;
+using FastEndpoints.Swagger;
+using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-namespace CryptoBank.WebApi;
+var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+);
 
-public static class Program
+// Add services to the container.
+builder.Services.AddFastEndpoints();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddSingleton<Dispatcher>();
+builder.Services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
+builder.Services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.SwaggerDocument();
+
+builder.AddNews();
+
+
+var app = builder.Build();
+
+app.UseAuthorization();
+app.UseFastEndpoints();
+
+if (app.Environment.IsDevelopment())
 {
-    public static void Main(string[] args)
-    {
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .CreateBootstrapLogger();
-
-        Log.Information("Starting up!");
-
-        try
-        {
-            WebStart(args);
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "An unhandled exception occured during bootstrapping");
-        }
-        finally
-        {
-            Log.CloseAndFlush();
-        }
-    }
-
-    private static void WebStart(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
-        builder.Host.UseSerilog((context, services, configuration) => configuration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-        );
-
-        // Add services to the container.
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-        builder.Services.AddControllers();
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
-
-        builder.Services.Configure<NewsOptions>(builder.Configuration.GetSection(NewsOptions.OptionName));
-        builder.Services.AddTransient<INewsService, NewsService>();
-
-        var app = builder.Build();
-
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-        else
-        {
-            app.UseHttpsRedirection();
-        }
-
-        app.UseAuthorization();
-        app.MapControllers();
-
-        app.Run();
-    }
+    app.UseSwaggerGen();
+    app.UseSwaggerUi3();
 }
+
+app.Run();
