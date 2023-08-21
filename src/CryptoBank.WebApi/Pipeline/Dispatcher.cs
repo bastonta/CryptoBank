@@ -4,17 +4,15 @@ namespace CryptoBank.WebApi.Pipeline;
 
 public class Dispatcher
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IMediator _mediator;
 
-    public Dispatcher(IServiceScopeFactory serviceScopeFactory)
+    public Dispatcher(IMediator mediator)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _mediator = mediator;
     }
 
     public async Task<TResponse> Dispatch<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
     {
-        await using var scope = _serviceScopeFactory.CreateAsyncScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        return await mediator.Send(request, cancellationToken);
+        return await _mediator.Send(request, cancellationToken);
     }
 }
