@@ -1,6 +1,6 @@
-﻿namespace CryptoBank.WebApi.Data.Entities;
+﻿namespace CryptoBank.WebApi.Features.News.Domain;
 
-public class News
+public class NewsModel
 {
     public Guid Id { get; set; }
 
