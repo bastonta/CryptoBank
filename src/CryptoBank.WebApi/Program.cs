@@ -1,8 +1,11 @@
+using System.Reflection;
 using CryptoBank.WebApi.Data;
+using CryptoBank.WebApi.Features.Identity.Registration;
 using CryptoBank.WebApi.Features.News.Registration;
 using CryptoBank.WebApi.Pipeline.Behaviors;
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using FluentValidation;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -21,12 +24,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 builder.Services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+builder.Services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly(), ServiceLifetime.Transient);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.SwaggerDocument();
 
 builder.AddNews();
+builder.AddIdentity();
 
 
 var app = builder.Build();
