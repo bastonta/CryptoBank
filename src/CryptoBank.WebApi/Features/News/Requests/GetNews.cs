@@ -1,7 +1,6 @@
 ﻿using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.News.Domain;
 using CryptoBank.WebApi.Features.News.Options;
-using CryptoBank.WebApi.Pipeline;
 using FastEndpoints;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
@@ -16,15 +15,15 @@ public static class GetNews
     [HttpGet("/news")]
     public class Endpoint : EndpointWithoutRequest<NewsModel[]>
     {
-        private readonly Dispatcher _dispatcher;
+        private readonly IMediator _mediator;
 
-        public Endpoint(Dispatcher dispatcher)
+        public Endpoint(IMediator mediator)
         {
-            _dispatcher = dispatcher;
+            _mediator = mediator;
         }
 
         public override async Task<NewsModel[]> ExecuteAsync(CancellationToken cancellationToken) =>
-            await _dispatcher.Dispatch(new Request(), cancellationToken);
+            await _mediator.Send(new Request(), cancellationToken);
     }
 
     public record Request : IRequest<NewsModel[]>;

@@ -1,6 +1,5 @@
 using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.News.Registration;
-using CryptoBank.WebApi.Pipeline;
 using CryptoBank.WebApi.Pipeline.Behaviors;
 using FastEndpoints;
 using FastEndpoints.Swagger;
@@ -20,7 +19,6 @@ builder.Services.AddFastEndpoints();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<Dispatcher>();
 builder.Services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 builder.Services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
