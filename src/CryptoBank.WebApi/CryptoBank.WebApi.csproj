@@ -13,16 +13,14 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
         <PackageReference Include="FastEndpoints" Version="5.15.0" />
         <PackageReference Include="FastEndpoints.Swagger" Version="5.15.0" />
+        <PackageReference Include="FluentValidation" Version="11.7.1" />
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.7.1" />
         <PackageReference Include="Mediator.Abstractions" Version="2.1.5" />
         <PackageReference Include="Mediator.SourceGenerator" Version="2.1.5">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
     </ItemGroup>
-
-
-
-
 
 
 
