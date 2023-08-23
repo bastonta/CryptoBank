@@ -1,6 +1,7 @@
 ﻿using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.Identity.Constants;
 using CryptoBank.WebApi.Features.Identity.Domain;
+using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Options;
 using CryptoBank.WebApi.Features.Identity.Services;
 using FastEndpoints;
@@ -63,7 +64,7 @@ public static class RegisterUser
 
         public async ValueTask<Unit> Handle(Request request, CancellationToken cancellationToken)
         {
-            var normalizedEmail = request.Email.Trim().ToUpperInvariant();
+            var normalizedEmail = request.Email.NormalizeString();
             if (await _dbContext.Users.AnyAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken))
             {
                 throw new Exception("User with this email already exists");
