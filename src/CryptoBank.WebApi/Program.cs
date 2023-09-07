@@ -1,5 +1,6 @@
 using System.Reflection;
 using CryptoBank.WebApi.Data;
+using CryptoBank.WebApi.Errors.Extensions;
 using CryptoBank.WebApi.Features.Identity.Registration;
 using CryptoBank.WebApi.Features.News.Registration;
 using CryptoBank.WebApi.Pipeline.Behaviors;
@@ -38,6 +39,7 @@ builder.AddIdentity();
 
 var app = builder.Build();
 
+app.MapProblemDetails();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseFastEndpoints();
