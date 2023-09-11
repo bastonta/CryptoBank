@@ -29,6 +29,11 @@ public static class ApplicationBuilderExtensions
                             Status = StatusCodes.Status404NotFound,
                         };
                         notFoundProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
+
+                        context.Response.ContentType = "application/problem+json";
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+
+                        await context.Response.WriteAsync(JsonSerializer.Serialize(notFoundProblemDetails));
                         break;
                     case ValidationErrorsException validationErrorsException:
                     {
@@ -43,7 +48,7 @@ public static class ApplicationBuilderExtensions
                         validationProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
 
                         validationProblemDetails.Extensions["errors"] = validationErrorsException.Errors
-                            .Select(x => new ErrorDataWithCode(x.Field, x.Message, x.Code));
+                            .Select(x => new ErrorData(x.Field, x.Message, x.Code));
 
                         context.Response.ContentType = "application/problem+json";
                         context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -109,7 +114,7 @@ public static class ApplicationBuilderExtensions
     }
 }
 
-internal record ErrorDataWithCode(
+internal record ErrorData(
     [property: JsonPropertyName("field")] string Field,
     [property: JsonPropertyName("message")] string Message,
     [property: JsonPropertyName("code")] string Code);
