@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CryptoBank.WebApi.Errors.Exceptions;
@@ -26,14 +27,10 @@ public static class ApplicationBuilderExtensions
                             Title = "Not found",
                             Type = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404",
                             Detail = notFoundErrorException.Message,
-                            Status = StatusCodes.Status404NotFound,
+                            Status = (int)HttpStatusCode.NotFound,
                         };
-                        notFoundProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
 
-                        context.Response.ContentType = "application/problem+json";
-                        context.Response.StatusCode = StatusCodes.Status404NotFound;
-
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(notFoundProblemDetails));
+                        await WriteErrorResponse(context, notFoundProblemDetails, HttpStatusCode.NotFound);
                         break;
                     case ValidationErrorsException validationErrorsException:
                     {
@@ -42,18 +39,15 @@ public static class ApplicationBuilderExtensions
                             Title = "Validation failed",
                             Type = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
                             Detail = validationErrorsException.Message,
-                            Status = StatusCodes.Status400BadRequest,
+                            Status = (int)HttpStatusCode.BadRequest,
+                            Extensions =
+                            {
+                                ["errors"] = validationErrorsException.Errors
+                                    .Select(x => new ErrorData(x.Field, x.Message, x.Code))
+                            }
                         };
 
-                        validationProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
-
-                        validationProblemDetails.Extensions["errors"] = validationErrorsException.Errors
-                            .Select(x => new ErrorData(x.Field, x.Message, x.Code));
-
-                        context.Response.ContentType = "application/problem+json";
-                        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(validationProblemDetails));
+                        await WriteErrorResponse(context, validationProblemDetails, HttpStatusCode.BadRequest);
                         break;
                     }
                     case LogicConflictException logicConflictException:
@@ -62,17 +56,14 @@ public static class ApplicationBuilderExtensions
                             Title = "Logic conflict",
                             Type = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/422",
                             Detail = logicConflictException.Message,
-                            Status = StatusCodes.Status422UnprocessableEntity,
+                            Status = (int)HttpStatusCode.UnprocessableEntity,
+                            Extensions =
+                            {
+                                ["code"] = logicConflictException.Code
+                            }
                         };
 
-                        logicConflictProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
-
-                        logicConflictProblemDetails.Extensions["code"] = logicConflictException.Code;
-
-                        context.Response.ContentType = "application/problem+json";
-                        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(logicConflictProblemDetails));
+                        await WriteErrorResponse(context, logicConflictProblemDetails, HttpStatusCode.UnsupportedMediaType);
                         break;
                     case OperationCanceledException:
                         var operationCanceledProblemDetails = new ProblemDetails
@@ -80,15 +71,10 @@ public static class ApplicationBuilderExtensions
                             Title = "Timeout",
                             Type = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504",
                             Detail = "Request timed out",
-                            Status = StatusCodes.Status504GatewayTimeout,
+                            Status = (int)HttpStatusCode.GatewayTimeout,
                         };
 
-                        operationCanceledProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
-
-                        context.Response.ContentType = "application/problem+json";
-                        context.Response.StatusCode = StatusCodes.Status504GatewayTimeout;
-
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(operationCanceledProblemDetails));
+                        await WriteErrorResponse(context, operationCanceledProblemDetails, HttpStatusCode.GatewayTimeout);
                         break;
                     default:
                         var internalErrorProblemDetails = new ProblemDetails
@@ -96,21 +82,26 @@ public static class ApplicationBuilderExtensions
                             Title = "Internal server error",
                             Type = "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500",
                             Detail = "Interval server error has occured",
-                            Status = StatusCodes.Status500InternalServerError,
+                            Status = (int)HttpStatusCode.InternalServerError,
                         };
 
-                        internalErrorProblemDetails.Extensions.Add("traceId", Activity.Current?.Id ?? context.TraceIdentifier);
-
-                        context.Response.ContentType = "application/problem+json";
-                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(internalErrorProblemDetails));
+                        await WriteErrorResponse(context, internalErrorProblemDetails, HttpStatusCode.InternalServerError);
                         break;
                 }
             });
         });
 
         return app;
+    }
+
+    private static async Task WriteErrorResponse(HttpContext context, ProblemDetails problemDetails, HttpStatusCode statusCode)
+    {
+        problemDetails.Extensions["traceId"] = Activity.Current?.Id ?? context.TraceIdentifier;
+
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = (int)statusCode;
+
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails));
     }
 }
 
