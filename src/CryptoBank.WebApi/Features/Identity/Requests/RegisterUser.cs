@@ -1,4 +1,5 @@
 ﻿using CryptoBank.WebApi.Data;
+using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Constants;
 using CryptoBank.WebApi.Features.Identity.Domain;
 using CryptoBank.WebApi.Features.Identity.Extensions;
@@ -67,7 +68,7 @@ public static class RegisterUser
             var normalizedEmail = request.Email.NormalizeString();
             if (await _dbContext.Users.AnyAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken))
             {
-                throw new Exception("User with this email already exists");
+                throw new ValidationErrorsException("email", "User with this email already exists", "email_already_exists");
             }
 
             var user = new UserModel

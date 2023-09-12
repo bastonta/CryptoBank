@@ -1,4 +1,6 @@
-﻿using CryptoBank.WebApi.Data;
+﻿using System.Security;
+using CryptoBank.WebApi.Data;
+using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Services;
 using FastEndpoints;
@@ -65,14 +67,19 @@ public static class LoginUser
                 .SingleOrDefaultAsync(s => s.NormalizedEmail == normalizedEmail, cancellationToken: ct);
 
             if (findUser is null)
-                throw new Exception("User not found");
+                throw ThrowInvalidCredentials();
 
             var verifyPassword = _passwordHasher.VerifyHashedPassword(findUser.PasswordHash, request.Password);
             if (!verifyPassword)
-                throw new Exception("Invalid password");
+                throw ThrowInvalidCredentials();
 
             var token = _tokenService.GenerateToken(findUser.Id, findUser.Email, findUser.Roles.Select(s => s.Name).ToArray());
             return new Response(token);
+        }
+
+        private ValidationErrorsException ThrowInvalidCredentials()
+        {
+            return new ValidationErrorsException("email_or_password", "Invalid credentials", "invalid_credentials");
         }
     }
 }
