@@ -13,4 +13,6 @@ public class IdentityOptions
     public string JwtKey { get; set; } = string.Empty;
 
     public TimeSpan TokenLifetime { get; set; }
+
+    public TimeSpan RefreshTokenLifetime { get; set; }
 }

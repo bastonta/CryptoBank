@@ -16,6 +16,7 @@ public static class IdentityBuilderExtensions
         builder.Services.Configure<IdentityOptions>(builder.Configuration.GetSection(IdentityOptions.OptionName));
         builder.Services.AddSingleton<PasswordHasher>();
         builder.Services.AddSingleton<JwtTokenService>();
+        builder.Services.AddScoped<RefreshTokenService>();
 
         var identityOptions = builder.Configuration.GetSection(IdentityOptions.OptionName).Get<IdentityOptions>()!;
 

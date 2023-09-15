@@ -14,7 +14,7 @@ namespace CryptoBank.WebApi.Features.Identity.Requests;
 public static class LoginUser
 {
     [AllowAnonymous]
-    [HttpPost("/login")]
+    [HttpPost("/identity/login")]
     public class Endpoint : Endpoint<Request, Response>
     {
         private readonly IMediator _mediator;
@@ -34,7 +34,8 @@ public static class LoginUser
     ) : IRequest<Response>;
 
     public record Response(
-        string Token
+        string AccessToken,
+        string RefreshToken
     );
 
     public class RequestValidator : AbstractValidator<Request>
@@ -51,12 +52,14 @@ public static class LoginUser
         private readonly AppDbContext _dbContext;
         private readonly PasswordHasher _passwordHasher;
         private readonly JwtTokenService _tokenService;
+        private readonly RefreshTokenService _refreshTokenService;
 
-        public RequestHandler(AppDbContext dbContext, PasswordHasher passwordHasher, JwtTokenService tokenService)
+        public RequestHandler(AppDbContext dbContext, PasswordHasher passwordHasher, JwtTokenService tokenService, RefreshTokenService refreshTokenService)
         {
             _dbContext = dbContext;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
+            _refreshTokenService = refreshTokenService;
         }
 
         public async ValueTask<Response> Handle(Request request, CancellationToken ct)
@@ -69,12 +72,16 @@ public static class LoginUser
             if (findUser is null)
                 throw ThrowInvalidCredentials();
 
+            if (findUser.IsLocked)
+                throw new LogicConflictException("User locked.", "user_locked");
+
             var verifyPassword = _passwordHasher.VerifyHashedPassword(findUser.PasswordHash, request.Password);
             if (!verifyPassword)
                 throw ThrowInvalidCredentials();
 
-            var token = _tokenService.GenerateToken(findUser.Id, findUser.Email, findUser.Roles.Select(s => s.Name).ToArray());
-            return new Response(token);
+            var refreshToken = await _refreshTokenService.CreateToken(findUser.Id);
+            var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, refreshToken.Id, findUser.Roles.Select(s => s.Name).ToArray());
+            return new Response(accessToken, refreshToken.Token);
         }
 
         private ValidationErrorsException ThrowInvalidCredentials()

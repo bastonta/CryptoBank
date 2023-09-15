@@ -16,11 +16,12 @@ public class JwtTokenService
         _identityOptions = options.Value;
     }
 
-    public string GenerateToken(Guid userId, string email, string[] roles)
+    public string GenerateToken(Guid userId, string email, Guid refreshTokenId, string[] roles)
     {
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new(JwtRegisteredClaimNames.Sid, refreshTokenId.ToString()),
             new(ClaimTypes.Email, email),
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));

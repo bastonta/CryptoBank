@@ -17,7 +17,7 @@ namespace CryptoBank.WebApi.Features.Identity.Requests;
 public static class RegisterUser
 {
     [AllowAnonymous]
-    [HttpPost("/register")]
+    [HttpPost("/identity/register")]
     public class Endpoint : Endpoint<Request>
     {
         private readonly IMediator _mediator;
