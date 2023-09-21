@@ -14,7 +14,7 @@ public static class UpdateToken
 {
     [AllowAnonymous]
     [HttpPost("/identity/refreshtoken")]
-    public class Endpoint : Endpoint<Request, Response>
+    public class Endpoint : Endpoint<Request, ResponseApi>
     {
         private readonly IMediator _mediator;
 
@@ -23,18 +23,38 @@ public static class UpdateToken
             _mediator = mediator;
         }
 
-        public override async Task<Response> ExecuteAsync(Request request, CancellationToken ct) =>
-            await _mediator.Send(request, ct);
+        public override async Task<ResponseApi> ExecuteAsync(Request request, CancellationToken ct)
+        {
+            var refreshToken = HttpContext.Request.Cookies["refreshToken"];
+            var result = await _mediator.Send(request with { RefreshToken = request.RefreshToken ?? refreshToken }, ct);
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = result.RefreshTokenExpires,
+                SameSite = SameSiteMode.Strict,
+                Secure = true,
+                Path = "/identity/refreshtoken"
+            };
+            HttpContext.Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
+
+            return new ResponseApi(result.AccessToken);
+        }
     }
+
+    public record ResponseApi(
+        string AccessToken
+    );
 
     public record Request(
         string AccessToken,
-        string RefreshToken
+        string? RefreshToken
     ) : IRequest<Response>;
 
     public record Response(
         string AccessToken,
-        string RefreshToken
+        string RefreshToken,
+        DateTime RefreshTokenExpires
     );
 
     public class RequestValidator : AbstractValidator<Request>
@@ -42,7 +62,6 @@ public static class UpdateToken
         public RequestValidator()
         {
             RuleFor(x => x.AccessToken).NotEmpty();
-            RuleFor(x => x.RefreshToken).NotEmpty();
         }
     }
 
@@ -67,7 +86,7 @@ public static class UpdateToken
             if (!validAccessToken)
                 throw new LogicConflictException("Invalid access token", "invalid_access_token");
 
-            var refreshTokenValidationResult = await _refreshTokenService.ValidateRefreshToken(tokenId, userId, request.RefreshToken, ct);
+            var refreshTokenValidationResult = await _refreshTokenService.ValidateRefreshToken(tokenId, userId, request.RefreshToken!, ct);
             if (refreshTokenValidationResult == RefreshTokenValidationResult.Expired)
                 throw new LogicConflictException("Refresh token expired", "refresh_token_expired");
 
@@ -98,7 +117,7 @@ public static class UpdateToken
                 _tokenService.GenerateToken(userId, user.Email, tokenId, user.Roles.Select(s => s.Name).ToArray());
 
             await transaction.CommitAsync(ct);
-            return new Response(accessToken, refreshToken.Token);
+            return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
         }
     }
 }

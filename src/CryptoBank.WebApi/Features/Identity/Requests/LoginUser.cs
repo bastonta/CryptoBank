@@ -15,7 +15,7 @@ public static class LoginUser
 {
     [AllowAnonymous]
     [HttpPost("/identity/login")]
-    public class Endpoint : Endpoint<Request, Response>
+    public class Endpoint : Endpoint<Request, ResponseApi>
     {
         private readonly IMediator _mediator;
 
@@ -24,9 +24,27 @@ public static class LoginUser
             _mediator = mediator;
         }
 
-        public override async Task<Response> ExecuteAsync(Request request, CancellationToken ct) =>
-            await _mediator.Send(request, ct);
+        public override async Task<ResponseApi> ExecuteAsync(Request request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(request, ct);
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = result.RefreshTokenExpires,
+                SameSite = SameSiteMode.Strict,
+                Secure = true,
+                Path = "/identity/refreshtoken"
+            };
+            HttpContext.Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
+
+            return new ResponseApi(result.AccessToken);
+        }
     }
+
+    public record ResponseApi(
+        string AccessToken
+    );
 
     public record Request(
         string Email,
@@ -35,7 +53,8 @@ public static class LoginUser
 
     public record Response(
         string AccessToken,
-        string RefreshToken
+        string RefreshToken,
+        DateTime RefreshTokenExpires
     );
 
     public class RequestValidator : AbstractValidator<Request>
@@ -81,7 +100,7 @@ public static class LoginUser
 
             var refreshToken = await _refreshTokenService.CreateToken(findUser.Id, ct);
             var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, refreshToken.Id, findUser.Roles.Select(s => s.Name).ToArray());
-            return new Response(accessToken, refreshToken.Token);
+            return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
         }
 
         private ValidationErrorsException ThrowInvalidCredentials()
