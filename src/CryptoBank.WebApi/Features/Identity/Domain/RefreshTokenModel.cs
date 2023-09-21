@@ -2,7 +2,7 @@
 
 namespace CryptoBank.WebApi.Features.Identity.Domain;
 
-public class RefreshToken
+public class RefreshTokenModel
 {
     public Guid Id { get; set; }
 
@@ -18,6 +18,7 @@ public class RefreshToken
 
     public DateTime? Revoked { get; set; }
 
+    [NotMapped]
     public bool IsExpired => DateTime.UtcNow >= Expires;
 
     [NotMapped]

@@ -74,6 +74,10 @@ public static class UpdateToken
             var user = await _dbContext.Users.Include(s => s.Roles)
                 .SingleAsync(s => s.Id == userId, cancellationToken: cancellationToken);
 
+            if (user.IsLocked)
+                throw new LogicConflictException("User locked. You can not update refresh token.", "user_locked");
+
+            var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             if (refreshTokenValidationResult == RefreshTokenValidationResult.Revoked)
             {
                 if (!user.IsLocked)
@@ -83,7 +87,7 @@ public static class UpdateToken
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
-                await _refreshTokenService.RevokeTokenByUser(userId);
+                await _refreshTokenService.RevokeToken(tokenId);
                 throw new LogicConflictException("Refresh token revoked", "refresh_token_revoked");
             }
 
@@ -91,6 +95,7 @@ public static class UpdateToken
             var accessToken =
                 _tokenService.GenerateToken(userId, user.Email, tokenId, user.Roles.Select(s => s.Name).ToArray());
 
+            await transaction.CommitAsync(cancellationToken);
             return new Response(accessToken, refreshToken.Token);
         }
     }

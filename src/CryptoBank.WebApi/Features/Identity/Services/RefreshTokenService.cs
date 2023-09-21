@@ -22,7 +22,7 @@ public class RefreshTokenService
         _identityOptions = identityOptions.Value;
     }
 
-    public async Task<RefreshToken> CreateToken(Guid userId)
+    public async Task<RefreshTokenModel> CreateToken(Guid userId)
     {
         return await GenerateRefreshToken(userId);
     }
@@ -36,19 +36,19 @@ public class RefreshTokenService
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task RevokeTokenByUser(Guid userId)
+    public async Task ClearRefreshToken(CancellationToken token)
     {
-        var refreshTokens = await _dbContext.RefreshTokens.Where(s => s.UserId == userId).ToListAsync();
-        foreach (var token in refreshTokens)
-        {
-            token.Revoked = DateTime.UtcNow;
-        }
+        var expireDate = DateTime.UtcNow.Add(-_identityOptions.RefreshTokenRemoveAfter);
 
-        _dbContext.RefreshTokens.UpdateRange(refreshTokens);
-        await _dbContext.SaveChangesAsync();
+        var refreshTokens = await _dbContext.RefreshTokens
+            .Where(s => s.Expires < expireDate)
+            .ToListAsync(cancellationToken: token);
+
+        _dbContext.RefreshTokens.RemoveRange(refreshTokens);
+        await _dbContext.SaveChangesAsync(token);
     }
 
-    public async Task<RefreshToken> UpdateToken(Guid tokenId, string token)
+    public async Task<RefreshTokenModel> UpdateToken(Guid tokenId, string token)
     {
         var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId);
         if (!refreshToken.IsActive || refreshToken.Token != token)
@@ -56,6 +56,7 @@ public class RefreshTokenService
             throw new InvalidOperationException();
         }
 
+        var transaction = await _dbContext.Database.BeginTransactionAsync();
         refreshToken.Token = await GetUniqueToken();
         refreshToken.Updated = DateTime.UtcNow;
         refreshToken.Expires = refreshToken.Updated.Value.Add(_identityOptions.RefreshTokenLifetime);
@@ -63,6 +64,7 @@ public class RefreshTokenService
         _dbContext.RefreshTokens.Update(refreshToken);
         await _dbContext.SaveChangesAsync();
 
+        await transaction.CommitAsync();
         return refreshToken;
     }
 
@@ -128,11 +130,11 @@ public class RefreshTokenService
         return Task.FromResult(true);
     }
 
-    private async Task<RefreshToken> GenerateRefreshToken(Guid userId)
+    private async Task<RefreshTokenModel> GenerateRefreshToken(Guid userId)
     {
         var id = Guid.NewGuid();
         var token = await GetUniqueToken();
-        var refreshToken = new RefreshToken
+        var refreshToken = new RefreshTokenModel
         {
             Id = id,
             UserId = userId,

@@ -12,7 +12,7 @@ public sealed class AppDbContext : DbContext
     
     public DbSet<RoleModel> Roles { get; set; } = null!;
 
-    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<RefreshTokenModel> RefreshTokens { get; set; } = null!;
 
 
     public AppDbContext(DbContextOptions options) : base(options)

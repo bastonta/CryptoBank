@@ -15,4 +15,6 @@ public class IdentityOptions
     public TimeSpan TokenLifetime { get; set; }
 
     public TimeSpan RefreshTokenLifetime { get; set; }
+
+    public TimeSpan RefreshTokenRemoveAfter { get; set; }
 }
