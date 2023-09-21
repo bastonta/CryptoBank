@@ -22,55 +22,67 @@ public class RefreshTokenService
         _identityOptions = identityOptions.Value;
     }
 
-    public async Task<RefreshTokenModel> CreateToken(Guid userId)
+    public async Task<RefreshTokenModel> CreateToken(Guid userId, CancellationToken cancellationToken)
     {
-        return await GenerateRefreshToken(userId);
+        var id = Guid.NewGuid();
+        var token = await GetUniqueToken(cancellationToken);
+        var refreshToken = new RefreshTokenModel
+        {
+            Id = id,
+            UserId = userId,
+            Token = token,
+            Created = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.Add(_identityOptions.RefreshTokenLifetime)
+        };
+
+        _dbContext.RefreshTokens.Add(refreshToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return refreshToken;
     }
 
-    public async Task RevokeToken(Guid tokenId)
+    public async Task RevokeToken(Guid tokenId, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId);
+        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
         refreshToken.Revoked = DateTime.UtcNow;
 
         _dbContext.RefreshTokens.Update(refreshToken);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task ClearRefreshToken(CancellationToken token)
+    public async Task ClearRefreshToken(CancellationToken cancellationToken)
     {
         var expireDate = DateTime.UtcNow.Add(-_identityOptions.RefreshTokenRemoveAfter);
 
         var refreshTokens = await _dbContext.RefreshTokens
             .Where(s => s.Expires < expireDate)
-            .ToListAsync(cancellationToken: token);
+            .ToListAsync(cancellationToken: cancellationToken);
 
         _dbContext.RefreshTokens.RemoveRange(refreshTokens);
-        await _dbContext.SaveChangesAsync(token);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<RefreshTokenModel> UpdateToken(Guid tokenId, string token)
+    public async Task<RefreshTokenModel> UpdateToken(Guid tokenId, string token, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId);
+        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
         if (!refreshToken.IsActive || refreshToken.Token != token)
         {
             throw new InvalidOperationException();
         }
 
-        var transaction = await _dbContext.Database.BeginTransactionAsync();
-        refreshToken.Token = await GetUniqueToken();
+        refreshToken.Token = await GetUniqueToken(cancellationToken);
         refreshToken.Updated = DateTime.UtcNow;
         refreshToken.Expires = refreshToken.Updated.Value.Add(_identityOptions.RefreshTokenLifetime);
 
         _dbContext.RefreshTokens.Update(refreshToken);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await transaction.CommitAsync();
         return refreshToken;
     }
 
-    public async Task<RefreshTokenValidationResult> ValidateRefreshToken(Guid tokenId, Guid userId, string token)
+    public async Task<RefreshTokenValidationResult> ValidateRefreshToken(Guid tokenId, Guid userId, string token, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId);
+        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
 
         if (refreshToken.IsActive && refreshToken.UserId == userId && refreshToken.Token == token)
         {
@@ -90,7 +102,7 @@ public class RefreshTokenService
         return RefreshTokenValidationResult.Revoked;
     }
 
-    public Task<bool> ValidateAccessToken(string token, out Guid tokenId, out Guid userId)
+    public Task<bool> ValidateAccessToken(string token, out Guid tokenId, out Guid userId, CancellationToken cancellationToken)
     {
         tokenId = Guid.Empty;
         userId = Guid.Empty;
@@ -130,32 +142,13 @@ public class RefreshTokenService
         return Task.FromResult(true);
     }
 
-    private async Task<RefreshTokenModel> GenerateRefreshToken(Guid userId)
-    {
-        var id = Guid.NewGuid();
-        var token = await GetUniqueToken();
-        var refreshToken = new RefreshTokenModel
-        {
-            Id = id,
-            UserId = userId,
-            Token = token,
-            Created = DateTime.UtcNow,
-            Expires = DateTime.UtcNow.Add(_identityOptions.RefreshTokenLifetime)
-        };
-
-        _dbContext.RefreshTokens.Add(refreshToken);
-        await _dbContext.SaveChangesAsync();
-
-        return refreshToken;
-    }
-
-    private async Task<string> GetUniqueToken()
+    private async Task<string> GetUniqueToken(CancellationToken cancellationToken)
     {
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var tokenIsUnique = !await _dbContext.RefreshTokens.AnyAsync(s => s.Token == token);
+        var tokenIsUnique = !await _dbContext.RefreshTokens.AnyAsync(s => s.Token == token, cancellationToken: cancellationToken);
 
         if (!tokenIsUnique)
-            return await GetUniqueToken();
+            return await GetUniqueToken(cancellationToken);
 
         return token;
     }

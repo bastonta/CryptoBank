@@ -79,7 +79,7 @@ public static class LoginUser
             if (!verifyPassword)
                 throw ThrowInvalidCredentials();
 
-            var refreshToken = await _refreshTokenService.CreateToken(findUser.Id);
+            var refreshToken = await _refreshTokenService.CreateToken(findUser.Id, ct);
             var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, refreshToken.Id, findUser.Roles.Select(s => s.Name).ToArray());
             return new Response(accessToken, refreshToken.Token);
         }
