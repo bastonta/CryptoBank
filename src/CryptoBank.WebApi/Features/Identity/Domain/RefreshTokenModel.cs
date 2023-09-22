@@ -14,8 +14,6 @@ public class RefreshTokenModel
 
     public DateTime Expires { get; set; }
 
-    public DateTime? Updated { get; set; }
-
     public DateTime? Revoked { get; set; }
 
     [NotMapped]

@@ -3,7 +3,6 @@ using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Enums;
 using CryptoBank.WebApi.Features.Identity.Services;
 using FastEndpoints;
-using FluentValidation;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +13,7 @@ public static class UpdateToken
 {
     [AllowAnonymous]
     [HttpPost("/identity/refreshtoken")]
-    public class Endpoint : Endpoint<Request, ResponseApi>
+    public class Endpoint : Endpoint<EmptyRequest, ResponseApi>
     {
         private readonly IMediator _mediator;
 
@@ -23,10 +22,10 @@ public static class UpdateToken
             _mediator = mediator;
         }
 
-        public override async Task<ResponseApi> ExecuteAsync(Request request, CancellationToken ct)
+        public override async Task<ResponseApi> ExecuteAsync(EmptyRequest _, CancellationToken ct)
         {
             var refreshToken = HttpContext.Request.Cookies["refreshToken"];
-            var result = await _mediator.Send(request with { RefreshToken = request.RefreshToken ?? refreshToken }, ct);
+            var result = await _mediator.Send(new Request(RefreshToken: refreshToken), ct);
 
             var cookieOptions = new CookieOptions
             {
@@ -47,7 +46,6 @@ public static class UpdateToken
     );
 
     public record Request(
-        string AccessToken,
         string? RefreshToken
     ) : IRequest<Response>;
 
@@ -56,14 +54,6 @@ public static class UpdateToken
         string RefreshToken,
         DateTime RefreshTokenExpires
     );
-
-    public class RequestValidator : AbstractValidator<Request>
-    {
-        public RequestValidator()
-        {
-            RuleFor(x => x.AccessToken).NotEmpty();
-        }
-    }
 
     public class RequestHandler : IRequestHandler<Request, Response>
     {
@@ -80,43 +70,32 @@ public static class UpdateToken
 
         public async ValueTask<Response> Handle(Request request, CancellationToken ct)
         {
-            Guid userId;
-            Guid tokenId;
-            var validAccessToken = await _refreshTokenService.ValidateAccessToken(request.AccessToken, out tokenId, out userId, ct);
-            if (!validAccessToken)
-                throw new LogicConflictException("Invalid access token", "invalid_access_token");
+            var refreshToken = await _refreshTokenService.GetToken(request.RefreshToken!, ct);
+            if (refreshToken == null)
+                throw new LogicConflictException("Refresh token invalid", "refresh_token_invalid");
 
-            var refreshTokenValidationResult = await _refreshTokenService.ValidateRefreshToken(tokenId, userId, request.RefreshToken!, ct);
+            var refreshTokenValidationResult = _refreshTokenService.ValidateRefreshToken(refreshToken);
             if (refreshTokenValidationResult == RefreshTokenValidationResult.Expired)
                 throw new LogicConflictException("Refresh token expired", "refresh_token_expired");
 
             var user = await _dbContext.Users.Include(s => s.Roles)
-                .SingleAsync(s => s.Id == userId, cancellationToken: ct);
+                .SingleAsync(s => s.Id == refreshToken.UserId, cancellationToken: ct);
 
             if (user.IsLocked)
                 throw new LogicConflictException("User locked. You can not update refresh token.", "user_locked");
 
-            var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
             if (refreshTokenValidationResult == RefreshTokenValidationResult.Revoked)
             {
-                if (!user.IsLocked)
-                {
-                    user.Locked = DateTime.UtcNow;
-                    _dbContext.Users.Update(user);
-                    await _dbContext.SaveChangesAsync(ct);
-                }
-
-                await _refreshTokenService.RevokeToken(tokenId, ct);
-                await transaction.CommitAsync(ct);
+                user.Locked = DateTime.UtcNow;
+                _dbContext.Users.Update(user);
+                await _dbContext.SaveChangesAsync(ct);
 
                 throw new LogicConflictException("Refresh token revoked", "refresh_token_revoked");
             }
 
-            var refreshToken = await _refreshTokenService.UpdateToken(tokenId, request.RefreshToken, ct);
-            var accessToken =
-                _tokenService.GenerateToken(userId, user.Email, tokenId, user.Roles.Select(s => s.Name).ToArray());
+            refreshToken = await _refreshTokenService.UpdateToken(refreshToken, ct);
+            var accessToken = _tokenService.GenerateToken(user.Id, user.Email, user.Roles.Select(s => s.Name).ToArray());
 
-            await transaction.CommitAsync(ct);
             return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
         }
     }

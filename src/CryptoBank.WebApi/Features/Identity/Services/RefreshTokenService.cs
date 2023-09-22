@@ -1,13 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Security.Cryptography;
 using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.Identity.Domain;
 using CryptoBank.WebApi.Features.Identity.Enums;
 using CryptoBank.WebApi.Features.Identity.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace CryptoBank.WebApi.Features.Identity.Services;
 
@@ -41,9 +38,18 @@ public class RefreshTokenService
         return refreshToken;
     }
 
-    public async Task RevokeToken(Guid tokenId, CancellationToken cancellationToken)
+    public async Task<RefreshTokenModel?> GetToken(string token, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
+        var refreshToken = await _dbContext.RefreshTokens.SingleOrDefaultAsync(s => s.Token == token, cancellationToken: cancellationToken);
+        return  refreshToken;
+    }
+
+    public async Task RevokeToken(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
+    {
+        if (!refreshToken.IsActive)
+        {
+            throw new InvalidOperationException();
+        }
         refreshToken.Revoked = DateTime.UtcNow;
 
         _dbContext.RefreshTokens.Update(refreshToken);
@@ -62,29 +68,26 @@ public class RefreshTokenService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<RefreshTokenModel> UpdateToken(Guid tokenId, string token, CancellationToken cancellationToken)
+    public async Task<RefreshTokenModel> UpdateToken(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
-        if (!refreshToken.IsActive || refreshToken.Token != token)
+        if (!refreshToken.IsActive)
         {
             throw new InvalidOperationException();
         }
 
-        refreshToken.Token = await GetUniqueToken(cancellationToken);
-        refreshToken.Updated = DateTime.UtcNow;
-        refreshToken.Expires = refreshToken.Updated.Value.Add(_identityOptions.RefreshTokenLifetime);
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        _dbContext.RefreshTokens.Update(refreshToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await RevokeToken(refreshToken, cancellationToken);
+        var newRefreshToken = await CreateToken(refreshToken.UserId, cancellationToken);
 
-        return refreshToken;
+        await  transaction.CommitAsync(cancellationToken);
+
+        return  newRefreshToken;
     }
 
-    public async Task<RefreshTokenValidationResult> ValidateRefreshToken(Guid tokenId, Guid userId, string token, CancellationToken cancellationToken)
+    public RefreshTokenValidationResult ValidateRefreshToken(RefreshTokenModel refreshToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleAsync(s => s.Id == tokenId, cancellationToken: cancellationToken);
-
-        if (refreshToken.IsActive && refreshToken.UserId == userId && refreshToken.Token == token)
+        if (refreshToken.IsActive)
         {
             return RefreshTokenValidationResult.Success;
         }
@@ -100,46 +103,6 @@ public class RefreshTokenService
         }
 
         return RefreshTokenValidationResult.Revoked;
-    }
-
-    public Task<bool> ValidateAccessToken(string token, out Guid tokenId, out Guid userId, CancellationToken cancellationToken)
-    {
-        tokenId = Guid.Empty;
-        userId = Guid.Empty;
-
-        try
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_identityOptions.JwtKey);
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidAudience = _identityOptions.Audience,
-                ValidIssuer = _identityOptions.Issuer,
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = false
-            }, out SecurityToken validatedToken);
-
-            var jwtToken = (JwtSecurityToken)validatedToken;
-
-            if (!Guid.TryParse(jwtToken.Claims.Single(s => s.Type == JwtRegisteredClaimNames.Sid).Value, out tokenId))
-            {
-                return Task.FromResult(false);
-            }
-
-            if (!Guid.TryParse(jwtToken.Claims.Single(s => s.Type == JwtRegisteredClaimNames.Sub).Value, out userId))
-            {
-                return Task.FromResult(false);
-            }
-        }
-        catch (Exception)
-        {
-            return Task.FromResult(false);
-        }
-
-        return Task.FromResult(true);
     }
 
     private async Task<string> GetUniqueToken(CancellationToken cancellationToken)

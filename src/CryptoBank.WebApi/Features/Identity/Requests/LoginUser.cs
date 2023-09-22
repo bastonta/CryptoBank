@@ -1,5 +1,4 @@
-﻿using System.Security;
-using CryptoBank.WebApi.Data;
+﻿using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Services;
@@ -99,7 +98,7 @@ public static class LoginUser
                 throw ThrowInvalidCredentials();
 
             var refreshToken = await _refreshTokenService.CreateToken(findUser.Id, ct);
-            var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, refreshToken.Id, findUser.Roles.Select(s => s.Name).ToArray());
+            var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, findUser.Roles.Select(s => s.Name).ToArray());
             return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
         }
 
