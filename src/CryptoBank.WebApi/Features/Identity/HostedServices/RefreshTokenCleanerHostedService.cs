@@ -46,8 +46,8 @@ public class RefreshTokenCleanerHostedService : IHostedService, IDisposable
         try
         {
             using var scope = _services.CreateScope();
-            var discountService = scope.ServiceProvider.GetRequiredService<RefreshTokenService>();
-            await discountService.ClearRefreshToken(_tokenSource.Token);
+            var refreshTokenService = scope.ServiceProvider.GetRequiredService<RefreshTokenService>();
+            await refreshTokenService.ClearRefreshToken(_tokenSource.Token);
         }
         catch (Exception exception)
         {
