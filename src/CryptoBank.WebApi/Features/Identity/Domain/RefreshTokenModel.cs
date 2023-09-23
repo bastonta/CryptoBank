@@ -10,6 +10,8 @@ public class RefreshTokenModel
 
     public string Token { get; set; } = string.Empty;
 
+    public string? ReplacedByToken { get; set; }
+
     public DateTime Created { get; set; }
 
     public DateTime Expires { get; set; }

@@ -1,4 +1,5 @@
-﻿using CryptoBank.WebApi.Data;
+﻿using System.Text.Json.Serialization;
+using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Services;
@@ -14,7 +15,7 @@ public static class LoginUser
 {
     [AllowAnonymous]
     [HttpPost("/identity/login")]
-    public class Endpoint : Endpoint<Request, ResponseApi>
+    public class Endpoint : Endpoint<Request, Response>
     {
         private readonly IMediator _mediator;
 
@@ -23,27 +24,14 @@ public static class LoginUser
             _mediator = mediator;
         }
 
-        public override async Task<ResponseApi> ExecuteAsync(Request request, CancellationToken ct)
+        public override async Task<Response> ExecuteAsync(Request request, CancellationToken ct)
         {
             var result = await _mediator.Send(request, ct);
+            HttpContext.AddTokenToCookie(result.RefreshToken, result.RefreshTokenExpires);
 
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Expires = result.RefreshTokenExpires,
-                SameSite = SameSiteMode.Strict,
-                Secure = true,
-                Path = "/identity/refreshtoken"
-            };
-            HttpContext.Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
-
-            return new ResponseApi(result.AccessToken);
+            return result;
         }
     }
-
-    public record ResponseApi(
-        string AccessToken
-    );
 
     public record Request(
         string Email,
@@ -52,8 +40,8 @@ public static class LoginUser
 
     public record Response(
         string AccessToken,
-        string RefreshToken,
-        DateTime RefreshTokenExpires
+        [property: JsonIgnore] string RefreshToken,
+        [property: JsonIgnore] DateTime RefreshTokenExpires
     );
 
     public class RequestValidator : AbstractValidator<Request>

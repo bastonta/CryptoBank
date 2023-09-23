@@ -40,19 +40,52 @@ public class RefreshTokenService
 
     public async Task<RefreshTokenModel?> GetToken(string token, CancellationToken cancellationToken)
     {
-        var refreshToken = await _dbContext.RefreshTokens.SingleOrDefaultAsync(s => s.Token == token, cancellationToken: cancellationToken);
-        return  refreshToken;
+        var refreshToken =
+            await _dbContext.RefreshTokens.SingleOrDefaultAsync(s => s.Token == token,
+                cancellationToken: cancellationToken);
+        return refreshToken;
     }
 
-    public async Task RevokeToken(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
+    public async Task RevokeToken(
+        RefreshTokenModel refreshToken,
+        string? replacedByToken = null,
+        CancellationToken cancellationToken = default)
     {
         if (!refreshToken.IsActive)
         {
             throw new InvalidOperationException();
         }
+
         refreshToken.Revoked = DateTime.UtcNow;
+        refreshToken.ReplacedByToken = replacedByToken;
 
         _dbContext.RefreshTokens.Update(refreshToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RevokeDescendantRefreshTokens(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
+    {
+        var refreshTokens = await _dbContext.RefreshTokens
+            .Where(s => s.UserId == refreshToken.UserId)
+            .ToListAsync(cancellationToken);
+
+        var currentToken = refreshToken;
+        do
+        {
+            if (currentToken.IsActive)
+            {
+                currentToken.Revoked = DateTime.UtcNow;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentToken.ReplacedByToken))
+            {
+                break;
+            }
+
+            currentToken = refreshTokens.SingleOrDefault(s => s.Token == currentToken.ReplacedByToken);
+        } while (currentToken != null);
+
+        _dbContext.RefreshTokens.UpdateRange(refreshTokens);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -68,7 +101,7 @@ public class RefreshTokenService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<RefreshTokenModel> UpdateToken(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
+    public async Task<RefreshTokenModel> RotateRefreshToken(RefreshTokenModel refreshToken, CancellationToken cancellationToken)
     {
         if (!refreshToken.IsActive)
         {
@@ -77,12 +110,12 @@ public class RefreshTokenService
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        await RevokeToken(refreshToken, cancellationToken);
         var newRefreshToken = await CreateToken(refreshToken.UserId, cancellationToken);
+        await RevokeToken(refreshToken, newRefreshToken.Token, cancellationToken);
 
-        await  transaction.CommitAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
-        return  newRefreshToken;
+        return newRefreshToken;
     }
 
     public RefreshTokenValidationResult ValidateRefreshToken(RefreshTokenModel refreshToken)
@@ -108,7 +141,8 @@ public class RefreshTokenService
     private async Task<string> GetUniqueToken(CancellationToken cancellationToken)
     {
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        var tokenIsUnique = !await _dbContext.RefreshTokens.AnyAsync(s => s.Token == token, cancellationToken: cancellationToken);
+        var tokenIsUnique =
+            !await _dbContext.RefreshTokens.AnyAsync(s => s.Token == token, cancellationToken: cancellationToken);
 
         if (!tokenIsUnique)
             return await GetUniqueToken(cancellationToken);

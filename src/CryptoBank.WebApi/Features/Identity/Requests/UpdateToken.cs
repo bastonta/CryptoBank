@@ -1,11 +1,13 @@
 ﻿using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Enums;
+using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Services;
 using FastEndpoints;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 namespace CryptoBank.WebApi.Features.Identity.Requests;
 
@@ -13,7 +15,7 @@ public static class UpdateToken
 {
     [AllowAnonymous]
     [HttpPost("/identity/refreshtoken")]
-    public class Endpoint : Endpoint<EmptyRequest, ResponseApi>
+    public class Endpoint : Endpoint<EmptyRequest, Response>
     {
         private readonly IMediator _mediator;
 
@@ -22,28 +24,15 @@ public static class UpdateToken
             _mediator = mediator;
         }
 
-        public override async Task<ResponseApi> ExecuteAsync(EmptyRequest _, CancellationToken ct)
+        public override async Task<Response> ExecuteAsync(EmptyRequest _, CancellationToken ct)
         {
-            var refreshToken = HttpContext.Request.Cookies["refreshToken"];
+            var refreshToken = HttpContext.GetTokenFromCookie();
             var result = await _mediator.Send(new Request(RefreshToken: refreshToken), ct);
 
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Expires = result.RefreshTokenExpires,
-                SameSite = SameSiteMode.Strict,
-                Secure = true,
-                Path = "/identity/refreshtoken"
-            };
-            HttpContext.Response.Cookies.Append("refreshToken", result.RefreshToken, cookieOptions);
-
-            return new ResponseApi(result.AccessToken);
+            HttpContext.AddTokenToCookie(result.RefreshToken, result.RefreshTokenExpires);
+            return result;
         }
     }
-
-    public record ResponseApi(
-        string AccessToken
-    );
 
     public record Request(
         string? RefreshToken
@@ -51,8 +40,8 @@ public static class UpdateToken
 
     public record Response(
         string AccessToken,
-        string RefreshToken,
-        DateTime RefreshTokenExpires
+        [property: JsonIgnore] string RefreshToken,
+        [property: JsonIgnore] DateTime RefreshTokenExpires
     );
 
     public class RequestHandler : IRequestHandler<Request, Response>
@@ -86,14 +75,20 @@ public static class UpdateToken
 
             if (refreshTokenValidationResult == RefreshTokenValidationResult.Revoked)
             {
+                await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
                 user.Locked = DateTime.UtcNow;
                 _dbContext.Users.Update(user);
                 await _dbContext.SaveChangesAsync(ct);
 
+                await _refreshTokenService.RevokeDescendantRefreshTokens(refreshToken, ct);
+
+                await transaction.CommitAsync(ct);
+
                 throw new LogicConflictException("Refresh token revoked", "refresh_token_revoked");
             }
 
-            refreshToken = await _refreshTokenService.UpdateToken(refreshToken, ct);
+            refreshToken = await _refreshTokenService.RotateRefreshToken(refreshToken, ct);
             var accessToken = _tokenService.GenerateToken(user.Id, user.Email, user.Roles.Select(s => s.Name).ToArray());
 
             return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
