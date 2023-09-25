@@ -12,10 +12,12 @@ public static class IdentityBuilderExtensions
     public static WebApplicationBuilder AddIdentity(this WebApplicationBuilder builder)
     {
         builder.Services.AddHostedService<SeedDataHostedService>();
+        builder.Services.AddHostedService<RefreshTokenCleanerHostedService>();
 
         builder.Services.Configure<IdentityOptions>(builder.Configuration.GetSection(IdentityOptions.OptionName));
         builder.Services.AddSingleton<PasswordHasher>();
         builder.Services.AddSingleton<JwtTokenService>();
+        builder.Services.AddScoped<RefreshTokenService>();
 
         var identityOptions = builder.Configuration.GetSection(IdentityOptions.OptionName).Get<IdentityOptions>()!;
 

@@ -1,4 +1,4 @@
-﻿using System.Security;
+﻿using System.Text.Json.Serialization;
 using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Errors.Exceptions;
 using CryptoBank.WebApi.Features.Identity.Extensions;
@@ -14,7 +14,7 @@ namespace CryptoBank.WebApi.Features.Identity.Requests;
 public static class LoginUser
 {
     [AllowAnonymous]
-    [HttpPost("/login")]
+    [HttpPost("/identity/login")]
     public class Endpoint : Endpoint<Request, Response>
     {
         private readonly IMediator _mediator;
@@ -24,8 +24,13 @@ public static class LoginUser
             _mediator = mediator;
         }
 
-        public override async Task<Response> ExecuteAsync(Request request, CancellationToken ct) =>
-            await _mediator.Send(request, ct);
+        public override async Task<Response> ExecuteAsync(Request request, CancellationToken ct)
+        {
+            var result = await _mediator.Send(request, ct);
+            HttpContext.AddTokenToCookie(result.RefreshToken, result.RefreshTokenExpires);
+
+            return result;
+        }
     }
 
     public record Request(
@@ -34,7 +39,9 @@ public static class LoginUser
     ) : IRequest<Response>;
 
     public record Response(
-        string Token
+        string AccessToken,
+        [property: JsonIgnore] string RefreshToken,
+        [property: JsonIgnore] DateTime RefreshTokenExpires
     );
 
     public class RequestValidator : AbstractValidator<Request>
@@ -51,12 +58,14 @@ public static class LoginUser
         private readonly AppDbContext _dbContext;
         private readonly PasswordHasher _passwordHasher;
         private readonly JwtTokenService _tokenService;
+        private readonly RefreshTokenService _refreshTokenService;
 
-        public RequestHandler(AppDbContext dbContext, PasswordHasher passwordHasher, JwtTokenService tokenService)
+        public RequestHandler(AppDbContext dbContext, PasswordHasher passwordHasher, JwtTokenService tokenService, RefreshTokenService refreshTokenService)
         {
             _dbContext = dbContext;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
+            _refreshTokenService = refreshTokenService;
         }
 
         public async ValueTask<Response> Handle(Request request, CancellationToken ct)
@@ -69,12 +78,16 @@ public static class LoginUser
             if (findUser is null)
                 throw ThrowInvalidCredentials();
 
+            if (findUser.IsLocked)
+                throw new LogicConflictException("User locked.", "user_locked");
+
             var verifyPassword = _passwordHasher.VerifyHashedPassword(findUser.PasswordHash, request.Password);
             if (!verifyPassword)
                 throw ThrowInvalidCredentials();
 
-            var token = _tokenService.GenerateToken(findUser.Id, findUser.Email, findUser.Roles.Select(s => s.Name).ToArray());
-            return new Response(token);
+            var refreshToken = await _refreshTokenService.CreateToken(findUser.Id, ct);
+            var accessToken = _tokenService.GenerateToken(findUser.Id, findUser.Email, findUser.Roles.Select(s => s.Name).ToArray());
+            return new Response(accessToken, refreshToken.Token, refreshToken.Expires);
         }
 
         private ValidationErrorsException ThrowInvalidCredentials()
