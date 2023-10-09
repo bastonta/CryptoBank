@@ -1,6 +1,7 @@
 using System.Reflection;
 using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Errors.Extensions;
+using CryptoBank.WebApi.Features.Account.Registration;
 using CryptoBank.WebApi.Features.Identity.Registration;
 using CryptoBank.WebApi.Features.News.Registration;
 using CryptoBank.WebApi.Pipeline.Behaviors;
@@ -35,6 +36,7 @@ builder.Services.SwaggerDocument();
 
 builder.AddNews();
 builder.AddIdentity();
+builder.AddAccounts();
 
 
 var app = builder.Build();
