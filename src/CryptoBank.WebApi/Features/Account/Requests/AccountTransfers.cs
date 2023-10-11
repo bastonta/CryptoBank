@@ -37,10 +37,11 @@ public static class AccountTransfers
     {
         public RequestValidator()
         {
-            RuleFor(x => x.UserId).NotEmpty();
-            RuleFor(x => x.FromAccount).NotEmpty();
-            RuleFor(x => x.ToAccount).NotEmpty().NotEqual(s => s.FromAccount).WithMessage("You can't transfer to the same account");
-            RuleFor(x => x.Amount).GreaterThan(0);
+            RuleFor(x => x.UserId).NotEmpty().WithErrorCode("authentication_required");
+            RuleFor(x => x.FromAccount).NotEmpty().WithErrorCode("from_account_required");
+            RuleFor(x => x.ToAccount).NotEmpty().WithErrorCode("to_account_required")
+                .NotEqual(s => s.FromAccount).WithErrorCode("accounts_same").WithMessage("You can't transfer to the same account");
+            RuleFor(x => x.Amount).GreaterThan(0).WithErrorCode("amount_must_greater_than_zero");
         }
     }
 
@@ -72,14 +73,10 @@ public static class AccountTransfers
             fromAccount.Amount -= request.Amount;
             toAccount.Amount += request.Amount;
 
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
             _dbContext.Accounts.Update(fromAccount);
             _dbContext.Accounts.Update(toAccount);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
             return Unit.Value;
         }
     }
