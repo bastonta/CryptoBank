@@ -30,7 +30,7 @@ public static class ApplicationBuilderExtensions
                             Status = (int)HttpStatusCode.NotFound,
                         };
 
-                        await WriteErrorResponse(context, notFoundProblemDetails, HttpStatusCode.NotFound);
+                        await WriteErrorResponse(context, notFoundProblemDetails);
                         break;
                     case ValidationErrorsException validationErrorsException:
                     {
@@ -47,7 +47,7 @@ public static class ApplicationBuilderExtensions
                             }
                         };
 
-                        await WriteErrorResponse(context, validationProblemDetails, HttpStatusCode.BadRequest);
+                        await WriteErrorResponse(context, validationProblemDetails);
                         break;
                     }
                     case LogicConflictException logicConflictException:
@@ -63,7 +63,7 @@ public static class ApplicationBuilderExtensions
                             }
                         };
 
-                        await WriteErrorResponse(context, logicConflictProblemDetails, HttpStatusCode.UnsupportedMediaType);
+                        await WriteErrorResponse(context, logicConflictProblemDetails);
                         break;
                     case OperationCanceledException:
                         var operationCanceledProblemDetails = new ProblemDetails
@@ -74,7 +74,7 @@ public static class ApplicationBuilderExtensions
                             Status = (int)HttpStatusCode.GatewayTimeout,
                         };
 
-                        await WriteErrorResponse(context, operationCanceledProblemDetails, HttpStatusCode.GatewayTimeout);
+                        await WriteErrorResponse(context, operationCanceledProblemDetails);
                         break;
                     default:
                         var internalErrorProblemDetails = new ProblemDetails
@@ -85,7 +85,7 @@ public static class ApplicationBuilderExtensions
                             Status = (int)HttpStatusCode.InternalServerError,
                         };
 
-                        await WriteErrorResponse(context, internalErrorProblemDetails, HttpStatusCode.InternalServerError);
+                        await WriteErrorResponse(context, internalErrorProblemDetails);
                         break;
                 }
             });
@@ -94,12 +94,12 @@ public static class ApplicationBuilderExtensions
         return app;
     }
 
-    private static async Task WriteErrorResponse(HttpContext context, ProblemDetails problemDetails, HttpStatusCode statusCode)
+    private static async Task WriteErrorResponse(HttpContext context, ProblemDetails problemDetails)
     {
         problemDetails.Extensions["traceId"] = Activity.Current?.Id ?? context.TraceIdentifier;
 
         context.Response.ContentType = "application/problem+json";
-        context.Response.StatusCode = (int)statusCode;
+        context.Response.StatusCode = problemDetails.Status!.Value;
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails));
     }
