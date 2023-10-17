@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text;
 using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.Identity.Domain;
+using CryptoBank.WebApi.Features.Identity.Extensions;
 using CryptoBank.WebApi.Features.Identity.Options;
 using CryptoBank.WebApi.Tests.Integration.Harnesses.Base;
 using Microsoft.AspNetCore.Hosting;
@@ -56,9 +57,11 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
     {
         ThrowIfNotStarted();
 
+        var email = $"{Guid.NewGuid():N}@test.com";
         var user = new UserModel
         {
-            Email = $"{Guid.NewGuid():N}@test.com",
+            Email = email,
+            NormalizedEmail = email.NormalizeString(),
             PasswordHash = Guid.NewGuid().ToString(),
             BirthDate = DateOnly.FromDateTime(DateTime.UtcNow),
             CreatedAt = DateTime.UtcNow,
@@ -99,9 +102,11 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
     {
         ThrowIfNotStarted();
 
+        var email = $"{Guid.NewGuid():N}@test.com";
         var user = new UserModel
         {
-            Email = $"{Guid.NewGuid():N}@test.com",
+            Email = email,
+            NormalizedEmail = email.NormalizeString(),
             PasswordHash = Guid.NewGuid().ToString(),
             BirthDate = DateOnly.FromDateTime(DateTime.UtcNow),
             CreatedAt = DateTime.UtcNow,

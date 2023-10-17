@@ -1,45 +1,34 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using CryptoBank.WebApi.Data;
 using CryptoBank.WebApi.Features.Account.Domain;
 using CryptoBank.WebApi.Features.Account.Options;
 using CryptoBank.WebApi.Features.Account.Requests;
 using CryptoBank.WebApi.Tests.Integration.Errors.Contracts;
-using CryptoBank.WebApi.Tests.Integration.Harnesses;
-using CryptoBank.WebApi.Tests.Integration.Harnesses.Base;
+using CryptoBank.WebApi.Tests.Integration.Fixtures;
 using CryptoBank.WebApi.Tests.Integration.Helpers;
 using FluentValidation.TestHelper;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace CryptoBank.WebApi.Tests.Integration.Features.Account;
 
-public class CreateAccountTests : IAsyncLifetime
+public class CreateAccountTests : IClassFixture<WebApplicationTestFixture>, IAsyncLifetime
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationTestFixture _appFixture;
+    private readonly AsyncServiceScope _scope;
 
-    private readonly DatabaseHarness<Program, AppDbContext> _database;
-    private readonly HttpClientHarness<Program> _httpClient;
-
-    private AsyncServiceScope _scope;
-
-    public CreateAccountTests()
+    public CreateAccountTests(WebApplicationTestFixture appFixture)
     {
-        _database = new();
-        _httpClient = new(_database);
-
-        _factory = WebApplicationFactoryHelper.Create()
-            .AddHarness(_database)
-            .AddHarness(_httpClient);
+        _appFixture = appFixture;
+        _scope = _appFixture.Factory.Services.CreateAsyncScope();
     }
 
     [Fact]
     public async Task Should_create_account()
     {
         // Arrange
-        var (client, user) = await _httpClient.CreateAuthenticatedClient(Create.CancellationToken());
+        var (client, user) = await _appFixture.HttpClient.CreateAuthenticatedClient(Create.CancellationToken());
         var request = new
         {
             Currency = "BTC",
@@ -51,7 +40,7 @@ public class CreateAccountTests : IAsyncLifetime
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var account = await _database.Execute(s => s.Accounts.SingleAsync(x => x.UserId == user.Id));
+        var account = await _appFixture.Database.Execute(s => s.Accounts.SingleAsync(x => x.UserId == user.Id));
         account.Should().NotBeNull();
         account.Currency.Should().Be(request.Currency);
         account.UserId.Should().Be(user.Id);
@@ -62,7 +51,7 @@ public class CreateAccountTests : IAsyncLifetime
     public async Task Should_not_authenticate_if_wrong_jwt()
     {
         // Arrange
-        var (client, _) = await _httpClient.CreateWronglyAuthenticatedClient(Create.CancellationToken());
+        var (client, _) = await _appFixture.HttpClient.CreateWronglyAuthenticatedClient(Create.CancellationToken());
         var request = new
         {
             Currency = "BTC",
@@ -79,11 +68,11 @@ public class CreateAccountTests : IAsyncLifetime
     public async Task Should_not_create_account_by_limit()
     {
         // Arrange
-        var options = _factory.Services.GetRequiredService<IOptions<AccountOptions>>().Value;
+        var options = _scope.ServiceProvider.GetRequiredService<IOptions<AccountOptions>>().Value;
 
-        var (client, user) = await _httpClient.CreateAuthenticatedClient(Create.CancellationToken());
+        var (client, user) = await _appFixture.HttpClient.CreateAuthenticatedClient(Create.CancellationToken());
 
-        await _database.Execute(async s =>
+        await _appFixture.Database.Execute(async s =>
         {
             for (var i = 0; i < options.MaxAccountsPerUser; i++)
             {
@@ -111,38 +100,21 @@ public class CreateAccountTests : IAsyncLifetime
         response.LogicConflictShouldContain($"You can't have more than {options.MaxAccountsPerUser} accounts", "accounts_limit");
     }
 
-    public async Task InitializeAsync()
+
+    public Task InitializeAsync()
     {
-        await _database.Start(_factory, Create.CancellationToken());
-        await _httpClient.Start(_factory, Create.CancellationToken());
-
-        var _ = _factory.Server;
-
-        _scope = _factory.Services.CreateAsyncScope();
+        return Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
-        await _httpClient.Stop(Create.CancellationToken());
-        await _database.Stop(Create.CancellationToken());
-
         await _scope.DisposeAsync();
     }
 }
 
-public class CreateAccountValidatorTests : IAsyncLifetime
+public class CreateAccountValidatorTests
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly DatabaseHarness<Program, AppDbContext> _database;
-    private AsyncServiceScope _scope;
-    private CreateAccount.RequestValidator? _validator;
-
-    public CreateAccountValidatorTests()
-    {
-        _database = new();
-        _factory = WebApplicationFactoryHelper.Create()
-            .AddHarness(_database);
-    }
+    private readonly CreateAccount.RequestValidator? _validator = new();
 
     [Fact]
     public async Task Should_validate_correct_request()
@@ -156,19 +128,5 @@ public class CreateAccountValidatorTests : IAsyncLifetime
     {
         var result = await _validator.TestValidateAsync(new CreateAccount.Request(Guid.NewGuid(), ""));
         result.ShouldHaveValidationErrorFor(x => x.Currency).WithErrorCode("currency_required");
-    }
-
-    public async Task InitializeAsync()
-    {
-        await _database.Start(_factory, Create.CancellationToken());
-
-        _scope = _factory.Services.CreateAsyncScope();
-        _validator = new CreateAccount.RequestValidator();
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _database.Stop(Create.CancellationToken());
-        await _scope.DisposeAsync();
     }
 }

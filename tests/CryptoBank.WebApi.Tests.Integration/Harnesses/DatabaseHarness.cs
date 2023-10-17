@@ -55,11 +55,6 @@ public class DatabaseHarness<TProgram, TDbContext> : IHarness<TProgram>
         await _postgres.StartAsync(cancellationToken);
 
         _port = _postgres.GetMappedPublicPort(5432);
-
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
-        await db.Database.MigrateAsync(cancellationToken: cancellationToken);
-
         _started = true;
     }
 
@@ -76,6 +71,15 @@ public class DatabaseHarness<TProgram, TDbContext> : IHarness<TProgram>
         _started = false;
     }
 
+    public async Task Migrate(CancellationToken cancellationToken)
+    {
+        ThrowIfNotStarted();
+
+        await using var scope = _factory!.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
+        await db.Database.MigrateAsync(cancellationToken: cancellationToken);
+    }
+
     public async Task Execute(Func<TDbContext, Task> action)
     {
         ThrowIfNotStarted();
@@ -87,10 +91,7 @@ public class DatabaseHarness<TProgram, TDbContext> : IHarness<TProgram>
 
     public async Task<T> Execute<T>(Func<TDbContext, Task<T>> action)
     {
-        if (!_started)
-        {
-            throw new InvalidOperationException($"Database harness is not started. Call {nameof(Start)} first.");
-        }
+        ThrowIfNotStarted();
 
         await using var scope = _factory!.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
