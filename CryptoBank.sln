@@ -10,6 +10,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{7DAD8CC1-645
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoBank.WebApi", "src\CryptoBank.WebApi\CryptoBank.WebApi.csproj", "{530C35B2-FD15-47A3-8EB1-9C719256F4D6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F8D76F27-4314-49BC-8AC3-B8B620AFFFC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoBank.WebApi.Tests.Integration", "tests\CryptoBank.WebApi.Tests.Integration\CryptoBank.WebApi.Tests.Integration.csproj", "{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,11 +21,16 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6} = {7DAD8CC1-645F-44F9-BCC9-798694F29B22}
+		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B} = {F8D76F27-4314-49BC-8AC3-B8B620AFFFC4}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

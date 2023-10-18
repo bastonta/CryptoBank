@@ -39,8 +39,7 @@ public static class CreateAccount
     {
         public RequestValidator()
         {
-            RuleFor(x => x.UserId).NotEmpty();
-            RuleFor(x => x.Currency).NotEmpty();
+            RuleFor(x => x.Currency).NotEmpty().WithErrorCode("currency_required");
         }
     }
 
