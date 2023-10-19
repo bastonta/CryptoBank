@@ -42,9 +42,24 @@ public class GetAccountsTests : IClassFixture<WebApplicationTestFixture>, IAsync
             };
         }
 
+        var otherUserAccounts = new List<AccountModel>();
+
+        for (int i = 0; i < accountCount; i++)
+        {
+            otherUserAccounts.Add(new AccountModel
+            {
+                UserId = Guid.NewGuid(),
+                Currency = new [] { "BTC", "ETH", "DOGE" }[i % 3],
+                Number = Guid.NewGuid().ToString(),
+                DateOfOpening = DateTime.UtcNow,
+                Amount = (decimal)Random.Shared.NextDouble()
+            });
+        }
+
         await _appFixture.Database.Execute(async s =>
         {
             await s.Accounts.AddRangeAsync(accounts, Create.CancellationToken());
+            await s.Accounts.AddRangeAsync(otherUserAccounts, Create.CancellationToken());
             await s.SaveChangesAsync(Create.CancellationToken());
         });
 
