@@ -83,7 +83,7 @@ public class AccountTransfersTests : IClassFixture<WebApplicationTestFixture>, I
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var accounts = await _appFixture.Database.Execute(s => s.Accounts.Where(x => x.UserId == fromUser.Id || x.UserId == toUser.Id).ToListAsync());
+        var accounts = await _appFixture.Database.Execute(s => s.Accounts.ToListAsync());
         accounts.Should().HaveCount(3);
 
         accounts.Single(s => s.Number == notChangeAccount).Amount.Should().Be(10);
@@ -138,7 +138,7 @@ public class AccountTransfersTests : IClassFixture<WebApplicationTestFixture>, I
         response.Errors[0].Code.Should().Be("account_not_found");
         response.Errors[0].Field.Should().Be("FromAccount");
 
-        var accounts = await _appFixture.Database.Execute(s => s.Accounts.Where(x => x.UserId == user.Id).ToListAsync());
+        var accounts = await _appFixture.Database.Execute(s => s.Accounts.ToListAsync());
         accounts.Should().HaveCount(2);
 
         accounts.Single(s => s.Number == fromAccount).Amount.Should().Be(10);
@@ -192,7 +192,7 @@ public class AccountTransfersTests : IClassFixture<WebApplicationTestFixture>, I
         response.Errors[0].Code.Should().Be("account_not_found");
         response.Errors[0].Field.Should().Be("ToAccount");
 
-        var accounts = await _appFixture.Database.Execute(s => s.Accounts.Where(x => x.UserId == user.Id).ToListAsync());
+        var accounts = await _appFixture.Database.Execute(s => s.Accounts.ToListAsync());
         accounts.Should().HaveCount(2);
 
         accounts.Single(s => s.Number == fromAccount).Amount.Should().Be(10);
@@ -261,7 +261,7 @@ public class AccountTransfersTests : IClassFixture<WebApplicationTestFixture>, I
         response.Code.Should().Be("invalid_account");
         response.Detail.Should().Be("You can't transfer from this account");
 
-        var accounts = await _appFixture.Database.Execute(s => s.Accounts.Where(x => x.UserId == fromUser.Id || x.UserId == toUser.Id).ToListAsync());
+        var accounts = await _appFixture.Database.Execute(s => s.Accounts.ToListAsync());
         accounts.Should().HaveCount(3);
 
         accounts.Single(s => s.Number == notChangeAccount).Amount.Should().Be(10);
@@ -315,16 +315,16 @@ public class AccountTransfersTests : IClassFixture<WebApplicationTestFixture>, I
         response.Code.Should().Be("not_enough_money");
         response.Detail.Should().Be("You don't have enough money");
 
-        var accounts = await _appFixture.Database.Execute(s => s.Accounts.Where(x => x.UserId == user.Id).ToListAsync());
+        var accounts = await _appFixture.Database.Execute(s => s.Accounts.ToListAsync());
         accounts.Should().HaveCount(2);
 
         accounts.Single(s => s.Number == fromAccount).Amount.Should().Be(0);
         accounts.Single(s => s.Number == toAccount).Amount.Should().Be(0);
     }
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        return Task.CompletedTask;
+        await _appFixture.Database.Clear(Create.CancellationToken());
     }
 
     public async Task DisposeAsync()
