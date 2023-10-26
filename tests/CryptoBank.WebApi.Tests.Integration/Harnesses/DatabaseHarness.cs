@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Respawn;
+using Respawn.Graph;
 
 
 namespace CryptoBank.WebApi.Tests.Integration.Harnesses;
@@ -112,6 +113,7 @@ public class DatabaseHarness<TProgram, TDbContext> : IHarness<TProgram>
         var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             SchemasToInclude = new [] { "public" },
+            TablesToIgnore = new [] { new Table("Roles") },
             DbAdapter = DbAdapter.Postgres,
         });
 
