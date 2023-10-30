@@ -24,43 +24,11 @@ public class OpenedAccountsReportsTests : IClassFixture<WebApplicationTestFixtur
     public async Task Should_return_reports()
     {
         var (_, otherUser) = await _appFixture.HttpClient.CreateAuthenticatedClient(Create.CancellationToken());
-        await _appFixture.Database.Execute(async s =>
-        {
-            await s.Accounts.AddAsync(new AccountModel
-            {
-                UserId = otherUser.Id,
-                Amount = 0,
-                Currency = "BTC",
-                DateOfOpening = DateTime.Parse("2021-01-01T10:00:00Z").ToUniversalTime(),
-                Number = Guid.NewGuid().ToString(),
-            }, Create.CancellationToken());
-
-            await s.SaveChangesAsync(Create.CancellationToken());
-        });
-
         var (client, user) = await _appFixture.HttpClient.CreateAuthenticatedClient(new [] { RoleConstants.Analyst }, Create.CancellationToken());
-        await _appFixture.Database.Execute(async s =>
-        {
-            await s.Accounts.AddAsync(new AccountModel
-            {
-                UserId = user.Id,
-                Amount = 0,
-                Currency = "BTC",
-                DateOfOpening = DateTime.Parse("2021-01-01T10:00:00Z").ToUniversalTime(),
-                Number = Guid.NewGuid().ToString(),
-            }, Create.CancellationToken());
 
-            await s.Accounts.AddAsync(new AccountModel
-            {
-                UserId = user.Id,
-                Amount = 0,
-                Currency = "BTC",
-                DateOfOpening = DateTime.Parse("2021-01-02T10:00:00Z").ToUniversalTime(),
-                Number = Guid.NewGuid().ToString(),
-            }, Create.CancellationToken());
-
-            await s.SaveChangesAsync(Create.CancellationToken());
-        });
+        await CreateAccount(otherUser.Id, DateTime.Parse("2021-01-01T10:00:00Z"));
+        await CreateAccount(user.Id, DateTime.Parse("2021-01-01T10:00:00Z"));
+        await CreateAccount(user.Id, DateTime.Parse("2021-01-02T10:00:00Z"));
 
         var response = await client.GetAsJsonAsync<OpenedAccountsReports.Response[]>(
             "/account/report?startDate=2021-01-01&endDate=2021-01-02");
@@ -94,6 +62,23 @@ public class OpenedAccountsReportsTests : IClassFixture<WebApplicationTestFixtur
     public async Task DisposeAsync()
     {
         await _scope.DisposeAsync();
+    }
+
+    private async Task CreateAccount(Guid userId, DateTime dateOfOpening)
+    {
+        await _appFixture.Database.Execute(async s =>
+        {
+            await s.Accounts.AddAsync(new AccountModel
+            {
+                UserId = userId,
+                Amount = 0,
+                Currency = "BTC",
+                DateOfOpening = dateOfOpening.ToUniversalTime(),
+                Number = Guid.NewGuid().ToString(),
+            }, Create.CancellationToken());
+
+            await s.SaveChangesAsync(Create.CancellationToken());
+        });
     }
 }
 
