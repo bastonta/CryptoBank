@@ -9,6 +9,7 @@ using CryptoBank.WebApi.Features.Identity.Options;
 using CryptoBank.WebApi.Tests.Integration.Harnesses.Base;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -53,7 +54,13 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
         return _factory!.CreateClient();
     }
 
-    public async Task<(HttpClient, UserModel user)> CreateAuthenticatedClient(CancellationToken cancellationToken)
+    public Task<(HttpClient, UserModel user)> CreateAuthenticatedClient(CancellationToken cancellationToken)
+    {
+        var roles = Array.Empty<string>();
+        return CreateAuthenticatedClient(roles, cancellationToken);
+    }
+
+    public async Task<(HttpClient, UserModel user)> CreateAuthenticatedClient(string[] roles, CancellationToken cancellationToken)
     {
         ThrowIfNotStarted();
 
@@ -66,8 +73,14 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
             BirthDate = DateOnly.FromDateTime(DateTime.UtcNow),
             CreatedAt = DateTime.UtcNow,
         };
+
         await _databaseHarness.Execute(async context =>
         {
+            foreach (var roleName in roles)
+            {
+                var role = await context.Roles.SingleAsync(s => s.Name == roleName, cancellationToken: cancellationToken);
+                user.Roles.Add(role);
+            }
             context.Users.Add(user);
             await context.SaveChangesAsync(cancellationToken);
         });
@@ -77,6 +90,7 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
         };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var identityOptions = _factory!.Services.GetRequiredService<IOptions<IdentityOptions>>().Value;
 
