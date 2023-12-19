@@ -14,6 +14,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F8D76F27
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoBank.WebApi.Tests.Integration", "tests\CryptoBank.WebApi.Tests.Integration\CryptoBank.WebApi.Tests.Integration.csproj", "{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infra", "infra", "{F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "terraform", "terraform", "{EA75B189-91E3-4D15-A681-203964344B67}"
+	ProjectSection(SolutionItems) = preProject
+		infra\terraform\.gitignore = infra\terraform\.gitignore
+		infra\terraform\main.tf = infra\terraform\main.tf
+		infra\terraform\terraform.tf = infra\terraform\terraform.tf
+		infra\terraform\variables.tf = infra\terraform\variables.tf
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,6 +32,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6} = {7DAD8CC1-645F-44F9-BCC9-798694F29B22}
 		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B} = {F8D76F27-4314-49BC-8AC3-B8B620AFFFC4}
+		{EA75B189-91E3-4D15-A681-203964344B67} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
