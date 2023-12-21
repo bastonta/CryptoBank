@@ -16,8 +16,8 @@ resource "hcloud_network_subnet" "subnet" {
   ip_range     = "10.0.1.0/24"
 }
 
-resource "hcloud_firewall" "firewall-frontend" {
-  name = "firewall-frontend"
+resource "hcloud_firewall" "firewall-common" {
+  name = "firewall-common"
 
   rule {
     destination_ips = []
@@ -89,6 +89,10 @@ resource "hcloud_firewall" "firewall-frontend" {
       "::/0",
     ]
   }
+}
+
+resource "hcloud_firewall" "firewall-frontend" {
+  name = "firewall-frontend"
 
   rule {
     destination_ips = []
@@ -141,77 +145,6 @@ resource "hcloud_firewall" "firewall-backend" {
   rule {
     destination_ips = []
     direction       = "in"
-    port            = "22"
-    protocol        = "tcp"
-    source_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "53"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "53"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "80"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "80"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "443"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "443"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    destination_ips = []
-    direction       = "in"
     port            = "80"
     protocol        = "tcp"
     source_ips = [
@@ -243,77 +176,6 @@ resource "hcloud_firewall" "firewall-database" {
   name = "firewall-database"
 
   rule {
-    destination_ips = []
-    direction       = "in"
-    port            = "22"
-    protocol        = "tcp"
-    source_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "53"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "53"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "80"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "80"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "443"
-    protocol        = "tcp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
-    direction       = "out"
-    port            = "443"
-    protocol        = "udp"
-    destination_ips = [
-      "0.0.0.0/0",
-      "::/0",
-    ]
-  }
-
-  rule {
     direction       = "in"
     port            = "5432"
     protocol        = "tcp"
@@ -335,6 +197,7 @@ resource "hcloud_server" "frontend" {
   }
 
   firewall_ids = [
+    hcloud_firewall.firewall-common.id,
     hcloud_firewall.firewall-frontend.id
   ]
 
@@ -359,6 +222,7 @@ resource "hcloud_server" "backend" {
   }
 
   firewall_ids = [
+    hcloud_firewall.firewall-common.id,
     hcloud_firewall.firewall-backend.id
   ]
 
@@ -383,6 +247,7 @@ resource "hcloud_server" "database" {
   }
 
   firewall_ids = [
+    hcloud_firewall.firewall-common.id,
     hcloud_firewall.firewall-database.id
   ]
 
