@@ -1,0 +1,93 @@
+- name: Setup PostgreSQL
+  hosts: database
+  vars:
+    postgres_version: "16"
+    postgres_bin_path: "/usr/lib/postgresql/{{ postgres_version }}/bin"
+    postgres_config_dir: "/etc/postgresql/{{ postgres_version }}/main"
+    postgres_volume_dir: "/mnt/HC_Volume_{{ database_volume_id }}"
+    postgres_data_dir: "{{ postgres_volume_dir }}/data"
+    postgres_user: app1user
+    postgres_password: app1user
+
+  tasks:
+    - name: Add PostgreSQL repository signing key
+      shell: curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+    - name: Add PostgreSQL repository
+      shell: echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+
+    - name: Upgrade system
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+    - name: Install packages
+      apt:
+        name:
+        - "postgresql-{{postgres_version}}"
+        - "postgresql-contrib-{{postgres_version}}"
+        - libpq-dev
+        - python3-psycopg2
+        state: present
+
+    - name: Set volume directory owner
+      file:
+        path: "{{ postgres_volume_dir }}"
+        owner: postgres
+        group: postgres
+        mode: "755"
+
+    - name: Check if PostgreSQL is initialized
+      stat:
+        path: "{{ postgres_data_dir }}/pg_hba.conf"
+      register: postgres_data
+
+    - name: Empty data dir
+      file:
+        path: "{{ postgres_data_dir }}"
+        state: absent
+      when: not postgres_data.stat.exists
+
+    - name: Initialize PostgreSQL
+      shell: "{{ postgres_bin_path }}/initdb -D {{ postgres_data_dir }}"
+      become: true
+      become_user: postgres
+      when: not postgres_data.stat.exists
+
+    - name: Stop service
+      service:
+        name: postgresql
+        state: stopped
+        enabled: yes
+
+    - name: Allow connections from backend
+      lineinfile:
+        state: present
+        path: "{{ postgres_config_dir }}/pg_hba.conf"
+        line: "host all {{ postgres_user }} {{ backend_ip }}/32 scram-sha-256"
+
+    - name: Allow connections from internal network
+      lineinfile:
+        path: "{{ postgres_config_dir }}/postgresql.conf"
+        regexp: "^(.*)listen_addresses(.*)$"
+        line: "listen_addresses = '{{ database_ip }}, localhost'"
+        backrefs: yes
+
+    - name: Start and enable service
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create DB user
+      community.postgresql.postgresql_user:
+        state: present
+        name: "{{ postgres_user }}"
+        password: "{{ postgres_password }}"
+        role_attr_flags: LOGIN,CREATEDB
+      become: true
+      become_user: postgres
+
+    - name: Reboot a machine 
+      reboot:
+        test_command: uptime

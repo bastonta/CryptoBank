@@ -1,7 +1,11 @@
 locals {
   frontend_ip = "10.0.1.1"
-  backend_ip  = "10.0.1.2"
+  backend_ip = "10.0.1.2"
   database_ip = "10.0.1.3"
+}
+
+data "hcloud_ssh_key" "ssh_key" {
+  fingerprint = var.ssh_key_fingerprint
 }
 
 resource "hcloud_network" "network" {
@@ -190,6 +194,7 @@ resource "hcloud_server" "frontend" {
   server_type = "cx21"
   image       = "ubuntu-22.04"
   location    = "hel1"
+  ssh_keys    = [data.hcloud_ssh_key.ssh_key.name]
 
   network {
     network_id = hcloud_network.network.id
@@ -215,6 +220,7 @@ resource "hcloud_server" "backend" {
   server_type = "cx21"
   image       = "ubuntu-22.04"
   location    = "hel1"
+  ssh_keys    = [data.hcloud_ssh_key.ssh_key.name]
 
   network {
     network_id = hcloud_network.network.id
@@ -240,6 +246,7 @@ resource "hcloud_server" "database" {
   server_type = "cx21"
   image       = "ubuntu-22.04"
   location    = "hel1"
+  ssh_keys    = [data.hcloud_ssh_key.ssh_key.name]
 
   network {
     network_id = hcloud_network.network.id
@@ -267,7 +274,7 @@ resource "hcloud_volume" "database" {
   automount         = true
   format            = "ext4"
   delete_protection = true
-
+  
   labels = {
     purpose = "database"
   }
