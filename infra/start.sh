@@ -1,13 +1,5 @@
 #!/bin/bash
 
-frontend_ip="10.0.1.1"
-backend_ip="10.0.1.2"
-database_ip="10.0.1.3"
-
-export TF_VAR_frontend_ip=$frontend_ip
-export TF_VAR_backend_ip=$backend_ip
-export TF_VAR_database_ip=$database_ip
-
 # Start terraform
 terraform -chdir=terraform apply
 terraform -chdir=terraform output | awk '{ gsub (" ", "", $0); print}' > .env

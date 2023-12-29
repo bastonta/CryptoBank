@@ -1,7 +1,7 @@
 locals {
-  frontend_ip = var.frontend_ip
-  backend_ip  = var.backend_ip
-  database_ip = var.database_ip
+  frontend_ip = "10.0.1.1"
+  backend_ip = "10.0.1.2"
+  database_ip = "10.0.1.3"
 }
 
 data "hcloud_ssh_key" "ssh_key" {
