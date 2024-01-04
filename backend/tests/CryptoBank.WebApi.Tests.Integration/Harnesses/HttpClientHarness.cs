@@ -133,7 +133,7 @@ public class HttpClientHarness<TProgram> : IHarness<TProgram>
 
         var identityOptions = _factory!.Services.GetRequiredService<IOptions<IdentityOptions>>().Value;
 
-        var key = new SymmetricSecurityKey("invalidKeyinvalidKeyinvalidKeyinvalidKey"u8.ToArray());
+        var key = new SymmetricSecurityKey("ihtLXXDLE3jdwNEnFi07uk2J9vEZYGmr27xOrLV8i46GhW2P3g+WkLsItOD9STHZgnK3VNHYkdy87EDJBHJvyg=="u8.ToArray());
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
 
         var token = new JwtSecurityToken(

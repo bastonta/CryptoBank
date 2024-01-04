@@ -27,9 +27,11 @@ public static class HttpClientExtensions
     private static async Task<TResponse> DeserializeResponse<TResponse>(this HttpResponseMessage httpResponse, CancellationToken token)
     {
         var responseString = await httpResponse.Content.ReadAsStringAsync(token);
-        return JsonSerializer.Deserialize<TResponse>(responseString, new JsonSerializerOptions
+        var result = JsonSerializer.Deserialize<TResponse>(responseString, new JsonSerializerOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true
         })!;
+
+        return result;
     }
 }

@@ -49,7 +49,7 @@ app.UseFastEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerGen();
-    app.UseSwaggerUi3();
+    app.UseSwaggerUi();
 }
 
 app.Run();
