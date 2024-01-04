@@ -2,8 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8D980182-953B-4813-A98E-51AC4BC1F2AA}"
 	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		README.md = README.md
+		..\.gitignore = ..\.gitignore
+		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{7DAD8CC1-645F-44F9-BCC9-798694F29B22}"
@@ -15,13 +15,23 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoBank.WebApi.Tests.Integration", "tests\CryptoBank.WebApi.Tests.Integration\CryptoBank.WebApi.Tests.Integration.csproj", "{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infra", "infra", "{F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}"
+	ProjectSection(SolutionItems) = preProject
+		..\infra\start.sh = ..\infra\start.sh
+		..\infra\.gitignore = ..\infra\.gitignore
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "terraform", "terraform", "{EA75B189-91E3-4D15-A681-203964344B67}"
 	ProjectSection(SolutionItems) = preProject
-		infra\terraform\.gitignore = infra\terraform\.gitignore
-		infra\terraform\main.tf = infra\terraform\main.tf
-		infra\terraform\terraform.tf = infra\terraform\terraform.tf
-		infra\terraform\variables.tf = infra\terraform\variables.tf
+		..\infra\terraform\.gitignore = ..\infra\terraform\.gitignore
+		..\infra\terraform\main.tf = ..\infra\terraform\main.tf
+		..\infra\terraform\outputs.tf = ..\infra\terraform\outputs.tf
+		..\infra\terraform\terraform.tf = ..\infra\terraform\terraform.tf
+		..\infra\terraform\variables.tf = ..\infra\terraform\variables.tf
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ansible", "ansible", "{EAD6F0A3-D2BD-4EB4-A17D-6BBD33A527F6}"
+	ProjectSection(SolutionItems) = preProject
+		..\infra\ansible\playbook.yml = ..\infra\ansible\playbook.yml
 	EndProjectSection
 EndProject
 Global
@@ -33,6 +43,7 @@ Global
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6} = {7DAD8CC1-645F-44F9-BCC9-798694F29B22}
 		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B} = {F8D76F27-4314-49BC-8AC3-B8B620AFFFC4}
 		{EA75B189-91E3-4D15-A681-203964344B67} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
+		{EAD6F0A3-D2BD-4EB4-A17D-6BBD33A527F6} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
