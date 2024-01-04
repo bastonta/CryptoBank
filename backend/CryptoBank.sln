@@ -34,6 +34,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ansible", "ansible", "{EAD6
 		..\infra\ansible\playbook.yml = ..\infra\ansible\playbook.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github", "github", "{82DBF2F2-00F7-4078-A0E0-2BBF252FB3C1}"
+	ProjectSection(SolutionItems) = preProject
+		..\.github\workflows\backend-test.yml = ..\.github\workflows\backend-test.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +49,7 @@ Global
 		{7416CF81-B1EA-450F-8BA9-8ED0FDD58F2B} = {F8D76F27-4314-49BC-8AC3-B8B620AFFFC4}
 		{EA75B189-91E3-4D15-A681-203964344B67} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 		{EAD6F0A3-D2BD-4EB4-A17D-6BBD33A527F6} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
+		{82DBF2F2-00F7-4078-A0E0-2BBF252FB3C1} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
