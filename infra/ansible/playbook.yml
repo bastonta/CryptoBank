@@ -1,3 +1,88 @@
+- name: Update system
+  hosts: all
+
+  tasks:
+    - name: Upgrade system
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+
+- name: Setup frontend
+  hosts: frontend
+
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+
+    - name: Remove default nginx config
+      file:
+        name: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Install system nginx config
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+
+    - name: Install nginx site for HTTP site
+      template:
+        src: templates/nginx-http.j2
+        dest: /etc/nginx/sites-enabled/http
+
+    - name: Reload nginx to activate HTTP site
+      service:
+        name: nginx
+        state: restarted
+
+    - name: Recursively change ownership
+      file:
+        path: /var/www/html
+        state: directory
+        recurse: yes
+        owner: www-data
+        group: www-data
+
+    - name: Reboot a machine
+      reboot:
+        test_command: uptime
+
+
+- name: Setup backend
+  hosts: backend
+  vars:
+    docker_compose_dir: /srv/cryptobank-webapi
+
+  tasks:
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        update_cache: true
+
+    - name: Create docker compose directory
+      file:
+        path: "{{ docker_compose_dir }}"
+        state: directory
+
+    - name: Install docker compose config
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ docker_compose_dir }}/docker-compose.yml"
+
+    - name: Reboot a machine
+      reboot:
+        test_command: uptime
+
+
 - name: Setup PostgreSQL
   hosts: database
   vars:
@@ -6,28 +91,24 @@
     postgres_config_dir: "/etc/postgresql/{{ postgres_version }}/main"
     postgres_volume_dir: "/mnt/HC_Volume_{{ database_volume_id }}"
     postgres_data_dir: "{{ postgres_volume_dir }}/data"
-    postgres_user: app1user
-    postgres_password: app1user
 
   tasks:
-    - name: Add PostgreSQL repository signing key
-      shell: curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+    - name: Add Postgres apt key
+      apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
 
     - name: Add PostgreSQL repository
-      shell: echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
-
-    - name: Upgrade system
-      apt:
-        upgrade: dist
-        update_cache: yes
+      apt_repository:
+        repo: deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main
 
     - name: Install packages
       apt:
         name:
-        - "postgresql-{{postgres_version}}"
-        - "postgresql-contrib-{{postgres_version}}"
-        - libpq-dev
-        - python3-psycopg2
+          - "postgresql-{{postgres_version}}"
+          - "postgresql-contrib-{{postgres_version}}"
+          - libpq-dev
+          - python3-psycopg2
+        update_cache: true
         state: present
 
     - name: Set volume directory owner
@@ -88,6 +169,6 @@
       become: true
       become_user: postgres
 
-    - name: Reboot a machine 
+    - name: Reboot a machine
       reboot:
         test_command: uptime

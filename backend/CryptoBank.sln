@@ -37,12 +37,19 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "github", "github", "{82DBF2F2-00F7-4078-A0E0-2BBF252FB3C1}"
 	ProjectSection(SolutionItems) = preProject
 		..\.github\workflows\backend-test.yml = ..\.github\workflows\backend-test.yml
-		..\.github\workflows\docker-build.yml = ..\.github\workflows\docker-build.yml
+		..\.github\workflows\backend-deploy.yml = ..\.github\workflows\backend-deploy.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{104EF6E8-6F1E-4130-942B-D4E704A51434}"
 	ProjectSection(SolutionItems) = preProject
 		..\infra\docker\webapi.dockerfile = ..\infra\docker\webapi.dockerfile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "templates", "templates", "{DC17F6AB-DFBE-47F2-941C-246181C413F6}"
+	ProjectSection(SolutionItems) = preProject
+		..\infra\ansible\templates\docker-compose.yml.j2 = ..\infra\ansible\templates\docker-compose.yml.j2
+		..\infra\ansible\templates\nginx.conf.j2 = ..\infra\ansible\templates\nginx.conf.j2
+		..\infra\ansible\templates\nginx-http.j2 = ..\infra\ansible\templates\nginx-http.j2
 	EndProjectSection
 EndProject
 Global
@@ -57,6 +64,7 @@ Global
 		{EAD6F0A3-D2BD-4EB4-A17D-6BBD33A527F6} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 		{82DBF2F2-00F7-4078-A0E0-2BBF252FB3C1} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
 		{104EF6E8-6F1E-4130-942B-D4E704A51434} = {F9DB37C9-D48F-42C2-9F4E-BED69DA1855A}
+		{DC17F6AB-DFBE-47F2-941C-246181C413F6} = {EAD6F0A3-D2BD-4EB4-A17D-6BBD33A527F6}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{530C35B2-FD15-47A3-8EB1-9C719256F4D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
