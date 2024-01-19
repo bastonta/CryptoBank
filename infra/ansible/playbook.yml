@@ -91,6 +91,7 @@
     postgres_config_dir: "/etc/postgresql/{{ postgres_version }}/main"
     postgres_volume_dir: "/mnt/HC_Volume_{{ database_volume_id }}"
     postgres_data_dir: "{{ postgres_volume_dir }}/data"
+    postgres_config_file: "/var/lib/postgresql/{{ postgres_version }}/main/postgresql.auto.conf"
 
   tasks:
     - name: Add Postgres apt key
@@ -145,14 +146,18 @@
       lineinfile:
         state: present
         path: "{{ postgres_config_dir }}/pg_hba.conf"
-        line: "host all {{ postgres_user }} {{ backend_ip }}/32 scram-sha-256"
+        line: "host {{ postgres_database }} {{ postgres_user }} {{ backend_ip }}/32 scram-sha-256"
+
+    - name: Create postgresql.auto.conf file
+      file:
+        path: "{{ postgres_config_file }}"
+        state: touch
 
     - name: Allow connections from internal network
       lineinfile:
-        path: "{{ postgres_config_dir }}/postgresql.conf"
-        regexp: "^(.*)listen_addresses(.*)$"
+        state: present
+        path: "{{ postgres_config_file }}"
         line: "listen_addresses = '{{ database_ip }}, localhost'"
-        backrefs: yes
 
     - name: Start and enable service
       service:
@@ -160,12 +165,29 @@
         state: started
         enabled: yes
 
+    - name: Create a database
+      community.postgresql.postgresql_db:
+        name: "{{ postgres_database }}"
+      become: true
+      become_user: postgres
+
     - name: Create DB user
       community.postgresql.postgresql_user:
+        db: "{{ postgres_database }}"
         state: present
         name: "{{ postgres_user }}"
         password: "{{ postgres_password }}"
-        role_attr_flags: LOGIN,CREATEDB
+        role_attr_flags: LOGIN
+      become: true
+      become_user: postgres
+
+    - name: Grand privileges
+      community.postgresql.postgresql_privs:
+        db: "{{ postgres_database }}"
+        privs: ALL
+        type: schema
+        objs: public
+        role: "{{ postgres_user }}"
       become: true
       become_user: postgres
 

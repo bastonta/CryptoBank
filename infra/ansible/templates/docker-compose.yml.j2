@@ -5,6 +5,7 @@ services:
     image: ghcr.io/bastonta/cryptobank/webapi:latest
     restart: always
     environment:
-      ConnectionStrings__DefaultConnection: Host={{ database_ip }};Database=cryptobank;Username={{ postgres_user }};Password={{ postgres_password }};Maximum Pool Size=50;Connection Idle Lifetime=60;
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: Host={{ database_ip }};Database={{ postgres_database }};Username={{ postgres_user }};Password={{ postgres_password }};Maximum Pool Size=50;Connection Idle Lifetime=60;
     ports:
-    - "80:8080"
+    - "80:80"
